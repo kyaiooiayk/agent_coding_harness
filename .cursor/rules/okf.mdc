@@ -1,0 +1,80 @@
+---
+description: >-
+  Open Knowledge Format (OKF) v0.1 — navigate knowledge via index.md,
+  read frontmatter first, enforce folder ownership, keep the OKF map complete.
+alwaysApply: true
+---
+
+# Open Knowledge Format (OKF)
+
+Repo-root bundle (Option A). Spec: https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md
+
+## Knowledge vs docs (mandatory)
+
+| Folder | Purpose | Companion |
+|---|---|---|
+| `knowledge/` | **General knowledge** — portable reference, design patterns, not project-specific contracts | `knowledge/README.md` |
+| `docs/` | **This project's implementation** — how the project is built and behaves (architecture, invariants, local runtime, verification) | `docs/README.md` |
+
+Agents: read the companion README before choosing where to write. Project truth and runbooks → `docs/` (or owning service README). General patterns → `knowledge/` (human-owned; agent frontmatter only on existing files).
+
+## Folder ownership (mandatory)
+
+| Path | Who creates files | Agent may write | OKF indexed |
+|---|---|---|---|
+| `knowledge/` | **Human only** | **Frontmatter only** on existing files — no new files, no body edits, no renames/deletes | Yes — `knowledge/index.md` |
+| `docs/` | **Human or agent** | Full create, edit, rename (with index sync) | Yes — `docs/index.md` |
+| `api/README.md`, `frontend/README.md` | **Human or agent** | Full edit per `documentation-diagrams.mdc` | **No** — not part of OKF bundle |
+
+**Agent forbidden in `knowledge/`:** create a new `.md`, delete or rename a concept, edit prose/body below frontmatter, add index bullets for files the human did not create. If project truth or a runbook is needed, write under `docs/` (or the owning service README), not `knowledge/`.
+
+**When human adds a `knowledge/` file:** agent may add or refresh OKF frontmatter (`type`, `title`, `description`, `tags`, `timestamp`) and ask the human to update `knowledge/index.md`, or update `index.md` only when syncing an existing human-added file.
+
+SOP: `.cursor/skills/how-to-okf/SKILL.md`.
+
+## Full map (mandatory for OKF folders)
+
+Every concept under `knowledge/` and `docs/` **must** have OKF YAML frontmatter (`type`, `title`, `description`, `tags`).
+
+- **Coverage:** all `*.md` in those folders except `index.md`, `knowledge/README.md`, and `docs/README.md` (folder companions).
+- **Indexes:** `knowledge/index.md` and `docs/index.md` list every concept in that folder.
+- **Check:** `python3 scripts/okf-check.py` when adding, renaming, or removing `docs/` concepts (or after human adds `knowledge/` files + frontmatter).
+- **Rehydrate:** `python3 scripts/okf-rehydrate-index.py` after frontmatter or `docs/` edits.
+
+## Navigation (read path)
+
+- **Entry:** [/index.md](/index.md) — do not preload the whole tree.
+- **General reference (read-only concepts):** [/knowledge/index.md](/knowledge/index.md)
+- **Project contracts / runbooks (agent-writable):** [/docs/index.md](/docs/index.md)
+- **Service specifics:** `api/README.md`, `frontend/README.md` — direct open when editing; **not** in OKF index.
+- **Harness:** `.cursor/rules/` — not OKF. Router: `AGENTS.md`.
+
+Scan frontmatter `description` / `tags` / optional `disclosure` (`router` | `on_demand` | `background`) before opening full concept bodies.
+
+## Write path — `docs/` only (agent)
+
+New or substantially edited `.md` under `docs/` (except `index.md`):
+
+1. YAML frontmatter with `type`, `title`, `description`, `tags`, `timestamp`.
+2. Bundle-relative links: `/knowledge/...`, `/docs/...`.
+3. Update `docs/index.md` bullet.
+4. Run `python3 scripts/okf-rehydrate-index.py` and `python3 scripts/okf-check.py` before handback.
+
+## Write path — `knowledge/` (agent: frontmatter only)
+
+On an **existing** human-owned file only:
+
+1. Add or update the YAML frontmatter block.
+2. Do **not** change body content unless the user explicitly asks for a human-co-authored edit.
+
+Do **not** create `log.md` — git history is the changelog.
+
+## Exempt from OKF
+
+- `.cursor/rules/*.mdc`, `.cursor/hooks/`
+- `knowledge/README.md`, `docs/README.md` — folder companions (not OKF concepts)
+- **`api/README.md`, `frontend/README.md`** — service container docs; `documentation-diagrams.mdc` applies, not OKF
+
+## Handback
+
+List **knowledge:** or **docs:** paths in reply attribution when read or written. Run `okf-check.py` when `docs/` concepts changed.

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "code-intel": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/tools/code_intelligence/.venv/bin/code-intel-mcp",
+      "env": {
+        "CODE_INTEL_WORKSPACE": "${workspaceFolder}"
+      }
+    }
+  }
+}

@@ -1,0 +1,180 @@
+---
+description: End each reply with a bullet attribution block of skills, rules, docs, and hooks used.
+alwaysApply: true
+---
+
+# Reply attribution
+
+After the main answer (all tool calls finished), append a **Phase report** (`.cursor/rules/five-phase-delivery.mdc`) then a **Used** attribution block. Neither block counts toward the `tokens_economy` 2–4 sentence limit.
+
+Unresolved user decisions/approvals/credentials/deploys: put **User action needed** near the top of the reply first — policy in `.cursor/rules/user-action-visibility.mdc` (do not restate the full policy here).
+
+## Who must report
+
+| Agent | Phase report | Used block |
+|---|---|---|
+| Parent (handback) | Yes | Yes — own turn **plus** aggregated Phase 3–5 children (below) |
+| Phase 3 / 4 / 5 Task subagents | No (parent owns the table) | **Yes — mandatory** on every phase subagent final reply |
+| Other Task types (`explore`, specialists, ad-hoc `generalPurpose`) | n/a unless that agent is the handback parent | Own turn only — parent does **not** require aggregate for these |
+
+Explore / specialist / non-phase Task agents may still emit **Used** when useful; that is optional. **Phase 3–5 subagents may not omit Used.**
+
+## Format
+
+End every user-visible **parent** handback with a **Phase report** table, then a **Used** block (parent turn), then **Phase subagent Used** when Phases 3–5 ran. One bullet per item; omit empty categories. Do not use comma-separated inline lists or middle-dot separators.
+
+**Phase 3–5 subagents** end with **Used** only (same bullet categories). Do not invent a Phase report table.
+
+**Used**
+- **rules:** `<name or .cursor/rules/<file>.mdc>`
+- **skills:** `<skill-dir or .cursor/skills/<dir>/SKILL.md>`
+- **cursor:** `<other .cursor/ path>`
+- **agents:** `[friendly name](agent-id) — short purpose`
+- **readmes:** `<repo-relative path>`
+- **knowledge:** `<repo-relative path>`
+- **docs:** `<repo-relative path>`
+- **hooks:** `<event>` → `<script>` — `<status>`
+
+### Category rules
+
+- **rules** — rule filename without `.mdc` (e.g. `ponytail`). One bullet per rule. Scope: workspace rules (`.cursor/rules/`), user rules. Prefer the repo-relative path when listing for Phase subagent aggregate clarity (e.g. `.cursor/rules/ponytail.mdc`) — bare name is still valid for parent-only footers.
+- **skills** — skill directory name (e.g. `how-to-code`). One bullet per skill. Scope: project skills (`.cursor/skills/`), personal skills (`~/.cursor/skills/`). Prefer `.cursor/skills/<dir>/SKILL.md` in Phase 3–5 child footers and parent aggregates.
+- **cursor** — any other `.cursor/` path read or applied that is **not** a rule or skill (e.g. `.cursor/hooks/README.md`, `.cursor/agents/code-reviewer.md`, `.cursor/hooks.json`). One bullet per path. Omit when none.
+- **agents** — **every Task/Subagent this replying agent directly invoked this turn**: `explore`, `generalPurpose`, Phase 3–5 agents, and specialists (`.cursor/agents/*`). One bullet per launch: `[friendly name](agent-id) — short purpose` (one short clause; mark `(background)` when started in background). List at invoke time; omit when none launched. Nested launches belong in the **child** reply’s Used block — do not recursively invent child IDs. Specialists still require pre-announce (`Delegating to <name> — <why>` per `AGENTS.md`); do not pre-announce every ordinary phase/explore launch.
+- **readmes** — repo-relative paths to `README.md` / `readme.md` under `api/`, `frontend/`, etc. One bullet per path. **Exclude** `knowledge/` and `docs/` folder companions (use **knowledge:** / **docs:** for concept files only; `knowledge/README.md` and `docs/README.md` go under **readmes:**).
+- **knowledge** — repo-relative paths under `knowledge/` **read** this turn via the Read tool and that **influenced** the reply. One bullet per path. Not files only touched by grep/search. Not `knowledge/README.md` (list under **readmes:**).
+- **docs** — repo-relative paths under `docs/` **read** this turn via the Read tool and that **influenced** the reply. One bullet per path. Not files only touched by grep/search. Not `docs/README.md` (list under **readmes:**).
+- **hooks** — lifecycle hooks from `.cursor/hooks.json` / `.cursor/hooks/README.md`. One bullet per hook event. Report only what you know this turn (see below).
+
+List only what you **read or applied** this turn and that **influenced** the reply — not the full available inventory, not paths merely linked without being read.
+
+If nothing beyond default behaviour applied: single bullet `- **none**`.
+
+### hooks
+
+The footer is **informational** — it tells the programmer what Cursor *should* run on **this turn's** handback, not live progress. Ground truth: Cursor **Output → Hooks** and any `Hooks blocked handback` follow-up message.
+
+**Stop-hook timing:** Cursor fires `stop` only after the assistant turn fully completes (streaming done, tool results settled). The chat can look finished before the hook process starts — that gap is IDE scheduling, not the repo scripts. While the hook runs, output stays in **Output → Hooks** until lint/tests fail (`followup_message`); success is silent in chat.
+
+**Product code edited this turn** — you used `Write` or `StrReplace` on at least one path that is **not** `.cursor/`, `docs/`, `knowledge/`, `BAU/`, or `*.md` (same scope as `.cursor/hooks/_common.sh` `hook_is_product_code_path`). Shell-only edits, reads, greps, and questions do not count.
+
+Pick **one** footer line per hook from the table below — never combine active and idle in the same line.
+
+Use **what runs + when**, not bare `triggered`:
+
+| Event | Script | Footer when product code edited this turn | Footer when read-only this turn |
+| --- | --- | --- | --- |
+| `afterFileEdit` | `lint-after-edit.sh` | `on each product edit → fmt/lint-file (.py) + agent-edited stamp/paths` | `idle (no agent edits)` |
+| `stop` | `stop-gate-on-stop.sh` | `after turn ends → make lint → make dev-build → make test parallel=true` | `idle (read-only turn)` or `idle (plan mode)` |
+
+If a stop hook injected a follow-up (lint or test failed), append ` — blocked handback` to the matching stop line.
+
+Do **not** use `triggered`, `pending`, or `failed` without saying which command runs.
+
+## Examples
+
+**Used** (edited `api/<resource>.py` this turn)
+
+- **rules:** ponytail
+- **rules:** docker-ops-boundary
+- **skills:** how-to-code
+- **readmes:** api/README.md
+- **knowledge:** knowledge/MCP.md
+- **docs:** docs/create_conflicts.md
+- **hooks:** afterFileEdit → lint-after-edit.sh — on each product edit → fmt/lint-file (.py) + agent-edited stamp
+- **hooks:** stop → stop-gate-on-stop.sh — after turn ends → make lint → make dev-build → make test parallel=true
+
+**Used** (read-only turn — no Write/StrReplace on product paths)
+
+- **rules:** tokens_economy
+- **rules:** reply-attribution
+- **readmes:** knowledge/README.md
+- **hooks:** afterFileEdit → lint-after-edit.sh — idle (no agent edits)
+- **hooks:** stop → stop-gate-on-stop.sh — idle (read-only turn)
+
+**Used** (launched Task/Subagents this turn)
+
+- **rules:** reply-attribution
+- **agents:** [Security auditor](abc123) — review auth cookie flags
+- **agents:** [Phase 3 make it work](def456) — minimal registration write path
+- **hooks:** afterFileEdit → lint-after-edit.sh — idle (no agent edits)
+- **hooks:** stop → stop-gate-on-stop.sh — idle (read-only turn)
+
+**Roles vs other footers:** Used → agents is the linkable roster; Phase report stays phase status; plan `## Agentic critiques` owns findings (id optional — see Agents used).
+
+## Phase 3–5 subagent Used (child — mandatory)
+
+Every Phase 3, 4, or 5 Task subagent **must** end its final reply with a **Used** block for **that subagent’s turn only**:
+
+- **First bullet (mandatory):** `- **what was changed:** <one short clause>` — what this phase actually did (files/behaviour touched). If the phase walked a skip checklist and made zero edits: `- **what was changed:** none (checklist; zero edits)`.
+- List every `.cursor/rules/*.mdc` and `.cursor/skills/*/SKILL.md` (and other `.cursor/` paths under **cursor:**) that influenced the work — not the parent’s inventory.
+- Include **readmes** / **docs** / **knowledge** / **hooks** when they influenced the phase work (same category rules as above).
+- If the phase subagent nested further Tasks, list those under **agents:**; do not invent parent agent IDs.
+- Omitting **Used** (or omitting **what was changed**) is a harness defect — the parent must call it out (see aggregate).
+
+Example (Phase 3 child final reply footer):
+
+```markdown
+**Used**
+- **what was changed:** failing test + session write-path fix for user_id on create
+- **rules:** .cursor/rules/tdd.mdc
+- **rules:** .cursor/rules/ponytail.mdc
+- **skills:** .cursor/skills/how-to-code/SKILL.md
+- **readmes:** api/README.md
+- **hooks:** afterFileEdit → lint-after-edit.sh — on each product edit → fmt/lint-file (.py) + agent-edited stamp
+- **hooks:** stop → stop-gate-on-stop.sh — after turn ends → make lint → make dev-build → make test parallel=true
+```
+
+## Phase subagent Used (parent aggregate — mandatory when Phases 3–5 ran)
+
+After the parent’s own **Used** block, when this handback ran Phase 3 and/or 4 and/or 5 subagents, append:
+
+```markdown
+## Phase subagent Used
+
+### Phase 3 — [friendly name](agent-id)
+- **what was changed:** …
+- **rules:** .cursor/rules/…
+- **skills:** .cursor/skills/…/SKILL.md
+- …
+
+### Phase 4 — [friendly name](agent-id)
+- **what was changed:** …
+- …
+
+### Phase 5 — [friendly name](agent-id)
+- **what was changed:** …
+- …
+```
+
+Rules for the aggregate:
+
+1. **Copy from the child** — paste what the Phase 3–5 subagent reported (including **what was changed** as the first bullet under each phase heading); do not invent rules/skills or change summaries the child did not list.
+2. **Missing child Used** — for that phase heading, single bullet `- **missing:** subagent returned no Used block` (and still list the agent under parent **agents:**). Do not silently drop the phase.
+3. **Missing what was changed** — if the child Used exists but lacks **what was changed**, keep the child’s bullets and prepend `- **missing:** what was changed` (do not invent a summary).
+4. **Skipped phase with subagent run** — still include the child’s Used (often `what was changed: none (checklist; zero edits)` plus short / `none` attribution).
+5. **Phase `n/a`** (exempt task) — omit that phase heading from **Phase subagent Used**.
+6. **Explore / specialists** — not required in this aggregate (parent **agents:** roster is enough unless you choose to quote them).
+
+Example (parent handback tail after own **Used**):
+
+```markdown
+## Phase subagent Used
+
+### Phase 3 — [Phase 3 make it work](def456)
+- **what was changed:** failing test + session write-path fix for user_id on create
+- **rules:** .cursor/rules/tdd.mdc
+- **skills:** .cursor/skills/how-to-code/SKILL.md
+- **readmes:** api/README.md
+
+### Phase 4 — [Phase 4 optimise](ghi789)
+- **what was changed:** none (checklist; zero edits)
+- **rules:** .cursor/rules/ponytail.mdc
+- **skills:** .cursor/skills/how-to-code/SKILL.md
+
+### Phase 5 — [Phase 5 extensible](jkl012)
+- **what was changed:** added docs/user_agents.md + docs/index.md Guide row
+- **rules:** .cursor/rules/user-feature-guides.mdc
+- **skills:** .cursor/skills/how-to-user-feature-guide/SKILL.md
+- **docs:** docs/testing_strategy.md
+```

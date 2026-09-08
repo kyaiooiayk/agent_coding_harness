@@ -1,0 +1,53 @@
+---
+description: >-
+  `<describe your app here>` stack — languages, frameworks, and local runtime.
+  Non-negotiable choices for agents once filled in.
+globs:
+alwaysApply: true
+---
+
+# Stack
+
+`<describe your app here>`: `<describe stack and domain here>`. Details live in service READMEs and `docs/local_dev_docker.md` (when present).
+
+## Architecture
+
+- **API-first** — HTTP contract (schemas, routes) before UI details. Rationale: `knowledge/api_first_paradigm.md`.
+- **Design principles** — SOLID / DRY / CRUD: `knowledge/SOLID_principles.md`, `knowledge/DRY_principles.md`, `knowledge/CRUD_principles.md`.
+- **Service boundary** — `<describe owning service(s) and presentation layer here>`
+- **Persistence** — `<describe source of truth / store ownership here>`
+- **Local runtime** — `<describe Compose / local process topology here>`
+
+## Languages and runtimes
+
+| Layer | Stack |
+|---|---|
+| Backend | `<describe backend stack here>` |
+| Frontend | `<describe frontend stack here>` |
+| Local run | `<describe local runtime here>` |
+
+## Frontend styling and UI
+
+- `<describe styling system here — or delete this section if N/A>`
+- Dark / light mode — required on UI changes when a theme exists; `.cursor/rules/frontend-styling.mdc`.
+- **Do not** add Tailwind, CSS-in-JS, or Sass unless explicitly requested.
+
+## Testing and quality
+
+| Layer | Stack |
+|---|---|
+| Backend tests | `<describe — e.g. pytest>` |
+| Backend lint | `<describe — e.g. ruff>` |
+| Frontend tests | `<describe — e.g. Vitest + Testing Library>` |
+| E2E | `<describe — e.g. Playwright under e2e_test/>` |
+| Operator CLI | `<describe — e.g. Make + uv>` |
+
+## Package management
+
+- **Backend:** `<describe — e.g. root pyproject.toml + uv>`
+- **Frontend:** `<describe — e.g. frontend/package.json / npm>`
+
+## Do not introduce without explicit request
+
+- `<list forbidden architecture leaps for this product>`
+- Cloud deploy as part of this repo unless the user asks and `PRODUCT.md` / `docs/` define it

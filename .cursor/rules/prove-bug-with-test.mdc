@@ -1,0 +1,76 @@
+---
+description: >-
+  Bug-proof depth — root cause untrusted until a failing harness test; Bug proof
+  handback block. Hotline punchline: harness-hotline.mdc. Open on bug fixes.
+alwaysApply: false
+---
+
+# Prove the bug with a test
+
+**Disclosure:** Tier C (on demand). Punchline always on in `.cursor/rules/harness-hotline.mdc`. Model: `docs/agent_context_disclosure.md`.
+
+A root-cause diagnosis is a **hypothesis** until a **failing test** encodes the bug and fails for the **right reason**. Narrative, logs alone, or "I found it in the code" are not proof.
+
+This rule is the **user trust contract** for bugs. It amplifies `.cursor/rules/fix-root-cause.mdc`, `.cursor/rules/tdd.mdc`, and `.cursor/skills/how-to-prove-a-bug/SKILL.md`.
+
+## Invariant
+
+**No failing repro test → do not claim root cause is proven.**
+
+The repro test is **not throwaway** — it joins the permanent test harness in the same PR and guards recurrence.
+
+## When you MUST tell the user
+
+Say plainly (do not bury in prose) when any of these apply:
+
+| Situation | Tell the user |
+|---|---|
+| You have a theory but **no failing test yet** | "I don't have proof yet — need a failing test before we can trust the diagnosis." |
+| You are about to edit product code | Name the test you will write first, or the existing failing test you adopted |
+| You hand back a bug fix | Point to the **exact test path** (`file::test_name`) — that is the proof |
+| Someone (you or the user) stated root cause **without** a test | "That diagnosis is unverified until a test fails for the same reason." |
+| Test exists but fails for the **wrong reason** | "Test doesn't prove this bug yet — failure is X, we need Y." |
+
+Use the **Bug proof** handback block (below) on every bug-fix handback.
+
+## Order (non-negotiable)
+
+1. **Reproduce** the symptom yourself (`.cursor/rules/fix-root-cause.mdc`).
+2. **Write or adopt** a unit test closest to the bug (Vitest / pytest / shared_packages / api).
+3. **Run it** — it must **fail**; capture assertion or error (right reason).
+4. **Then** state root cause — mark **verified** only when step 3 passed.
+5. **Fix** minimal product code → test green → `make test-agent-stop`.
+
+Do not edit product code until steps 1–3 are done. Exception: user explicitly asks for test-after.
+
+## What counts as proof
+
+| Proof | Not proof |
+|---|---|
+| Failing unit test asserting wrong output/state/invariant | Code reading + "obviously broken here" |
+| User-supplied failing test that reproduces the bug | Log line alone without encoded invariant |
+| E2E or integration test when unit boundary cannot reach the bug | "Existing suite passes" |
+| Test failure message matches the reported symptom | Mock `assert_called` without output shape |
+
+E2E when `docs/testing_strategy.md` § When E2E is required applies — **in addition to** unit proof when possible, not instead of handback honesty.
+
+## Bug proof handback block (mandatory on bug fixes)
+
+Include in the handback body before Phase report:
+
+```markdown
+## Bug proof
+- **Test:** `<path>::<test_name>` (or Vitest `describe` / `it` path)
+- **Fails before fix:** <assertion or error — one line>
+- **Proves:** <one-sentence invariant the bug violated>
+- **Harness:** stays in repo — not a one-off script
+```
+
+If proof is missing, handback must say **"Bug proof: missing — cannot claim root cause yet"** and what test you will add next — not "fixed" or "root cause was X."
+
+## Reject
+
+- "Root cause is …" with no test cite in the same message
+- Deleting or skipping the repro test after the fix
+- Changing the test assertion to match broken behaviour instead of fixing product code
+- Treating manual repro as sufficient proof without encoding it in the harness (unless user waived test-after)

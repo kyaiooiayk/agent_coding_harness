@@ -1,0 +1,71 @@
+---
+description: >-
+  Vitest/RTL mocking — fetch stubs at the network boundary, state verification,
+  when to use E2E instead of vi.mock for React UI.
+globs: frontend/**
+alwaysApply: false
+---
+
+# Frontend test mocking (Vitest)
+
+**Disclosure:** Tier C (glob — any `frontend/**` edit). Parent: `.cursor/rules/test-doubles.mdc`. Hotline: `.cursor/rules/harness-hotline.mdc`. Strategy: `docs/testing_strategy.md`.
+
+## Layout
+
+- Specs live under **`frontend/tests/`** (`vite.config.ts` `include: ["tests/**/*.{test,spec}.{ts,tsx}"]`).
+- Import product code with a relative path into `src/`, e.g. `import { App } from "../src/main"`.
+
+## Default
+
+- Render **real components** under test; mock only at **trust boundaries** (network, browser APIs).
+- Assert **RTL state**: `toHaveTextContent`, `toHaveValue`, `toBeChecked`, `toBeVisible` — not `vi.fn()` call counts alone.
+
+## Network — stub `fetch`, not the component
+
+This SPA talks to the API via `fetch` (no separate `api/client` module). Prefer a **router-style** `vi.stubGlobal("fetch", …)` that returns canned JSON by URL (see `frontend/tests/App.test.tsx` `mockFetchRouter`, `frontend/tests/ServicesPage.test.tsx`).
+
+```typescript
+// Reject — assert call wiring only
+expect(fetchMock).toHaveBeenCalledWith("/api/<resources>")
+
+// Prefer — stub fetch; assert what the user sees
+vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+  const url = String(input)
+  if (url.includes("/<resources>")) {
+    return new Response(JSON.stringify([{ id: "one", name: "HQ", status: "active" }]), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+  return new Response("not found", { status: 404 })
+}))
+// …render… then:
+expect(await screen.findByText("HQ")).toBeInTheDocument()
+```
+
+When GET and write must stay consistent in one test, keep **one in-memory object** both stub branches read/write (stateful fake), then assert DOM after the write.
+
+## What belongs in Vitest vs E2E
+
+| Scenario | Vitest | E2E (`e2e_test/`) |
+|---|---|---|
+| Pure helpers (`<resource>Stats`, `jsonLeafPatch`, `batchLatencyStats`) | Real module test under `frontend/tests/` | — |
+| Component DOM (JsonTree, Services cards, API try-it UI) | Real render + fetch stub | — |
+| Create / Load / Archive / nested add / History across Compose | Thin coverage OK | Required when `docs/testing_strategy.md` E2E triggers apply |
+
+## Async defaults
+
+- Do not rely on `useEffect` + `findBy*` alone to paper over empty initial render — fix sync derivation or `waitFor` on **user-visible value** (`toHaveTextContent` / `toHaveValue`), not on mock calls.
+
+## Test file comments
+
+When a Vitest file still stubs network, add a one-line header pointing to the E2E that owns full-stack proof, e.g.:
+
+`Full stack: e2e_test/<resources>/test_<feature>_tab.py`
+
+## Reject in frontend tests
+
+- Asserting `toHaveBeenCalledWith` without a DOM/output assertion for user-facing behaviour.
+- Duplicating an E2E-only flow entirely in Vitest with every route mocked.
+- Mocking the component under test or its direct util instead of testing it for real.
+- Putting new specs under `frontend/src/**` — use `frontend/tests/`.

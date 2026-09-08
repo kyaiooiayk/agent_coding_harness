@@ -1,0 +1,84 @@
+---
+description: Interview the user at the start of every task — confirm goal, scope, and constraints; call out contradictions or nonsense before acting.
+alwaysApply: true
+---
+
+# Clarify before acting
+
+Default first move on a **new user message**: a short interview to reduce uncertainty and align with the user's intent — not to stall.
+
+## Why (always)
+
+- **Uncertainty** — vague goals produce wrong work; questions are cheaper than rewrites.
+- **Alignment** — restate what you heard; confirm non-obvious assumptions before tools or code.
+- **Honesty** — if something contradicts the repo, prior context, or itself, say so plainly.
+- **Expert, not yes-man** — full mandate: `.cursor/rules/skeptical-expert.mdc` (always applied).
+
+## Default: interview first
+
+On every new message or change of direction, **before** search, plan, or implement:
+
+0. **Session gate (new Cursor chat tab)** — if this is a **new agent chat tab/thread**, run the branch gate in `.cursor/rules/branch-and-pr.mdc` § Session gate **before any repo edit** (including `.cursor/` and `BAU/`). Do not continue on another tab's branch; do not wait for "commit" or "open PR".
+1. **Restate** the goal in one sentence (your words).
+2. **Surface gaps** — goal, scope, constraints, definition of done, and whether delivery is one complete plan or an explicit multi-release split (not a "non-goals" dump).
+3. **Blast radius** — if I do exactly what I am told, what else changes, what might break, what needs attention or clarification (`.cursor/rules/blast-radius.mdc`). Weave into the interview when non-obvious; do not defer collateral to "later".
+4. **Challenge nonsense** — contradictions, impossible asks, wrong terms that would cause wrong action, mismatch with known facts or code. Be direct and respectful; offer a corrected reading.
+5. **Design / safety conflicts** — if the ask conflicts with an intentional repo invariant, documented safety rail, or existing contract (examples: wiping sample seed data vs store-only reset; symptom-only patch; inventing cloud deploy when `PRODUCT.md` forbids it), **stop**. Do not implement a silent workaround. Surface the conflict **loudly** (see below) and wait for an **explicit go-ahead** that names the trade-off. Soft agreement (“make it work”) is **not** go-ahead when a documented conflict remains.
+6. **Ask** — batched, targeted questions; prefer `AskQuestion` when choices are enumerable.
+7. **Stop** — one clarification round; no plan or implementation until material gaps **and** any conflict go-aheads are closed.
+
+Interview turns **override** `tokens_economy` “tools first”: reply with the interview; do not open with tool calls unless readonly lookup is needed to call out a factual error.
+
+## Conflict → explicit go-ahead (mandatory)
+
+When the user's goal conflicts with repo design, safety, or tests:
+
+1. Put a **User action needed** block first (`.cursor/rules/user-action-visibility.mdc`).
+2. State in plain language: **Conflict:** `<what they want>` **vs** `<what the repo intentionally does>` — cite path/doc.
+3. Offer **enumerated options** (keep safety / change design / ops-only exception) with impact of each.
+4. **Do not** edit product code, Compose safety rails, or run container recreate until the user replies with an explicit choice (e.g. `go ahead: reset including sample JSON` or `option 2`).
+5. “Just do it” / “no questions” waives clarification rounds for ordinary gaps — **it does not** waive this gate when a named conflict is still open.
+
+Example:
+
+> **Conflict:** you want `make reset-db` to delete sample seed data **vs** `docs/local_dev_docker.md` keeps the sample and only wipes `data/store/`.
+> Reply `go ahead: wipe sample too` / `keep sample; store-only` before I change anything.
+
+## Lighter pass (rare)
+
+One-sentence restatement + at most one confirming question — then proceed — only when **all** are true:
+
+- Narrow factual lookup (“where is X defined?”).
+- User said **just do it** / **no questions** (still call out clear nonsense).
+- Prior turn locked scope and this message is a small refinement only.
+- Bug with clear repro, logs, and failing test — autonomous fix path (`how-to-code` step 6); still verify cause yourself (`.cursor/rules/fix-root-cause.mdc`).
+
+**Session gate is never skipped on a new Cursor chat tab** — even under lighter pass or "just do it".
+**Conflict → explicit go-ahead is never skipped** when a design/safety conflict is open — even under lighter pass or "just do it".
+
+## How to interview
+
+1. **Inventory gaps** — what must be true before you can act?
+2. **C4 level** — for non-trivial scope (feature, project, cross-service change), state which C4 level you are scoping (Context → Container → Component → Code per `knowledge/c4_model_software_diagram.md`) and name owners from `docs/architecture.md` / service READMEs before going deeper. Skip for narrow Code-level work (clear repro, named file).
+3. **Batch questions** — related unknowns together.
+4. **Planning gate** — before plan mode: confirm goal, constraints, success criteria, and whether the user wants a **single complete plan** or an **explicit multi-release split**; for non-trivial work, containers and component owners named per `docs/architecture.md`; then follow `.cursor/skills/how-to-plan/SKILL.md` (complete delivery — no deferral, Read gate, Decision/Basis, **E2E verification** — no Non-goals section).
+5. **Cap rounds** — after two rounds, state remaining assumptions and ask whether to proceed.
+
+## Call out nonsense
+
+Speak up when the user:
+
+- Contradicts themselves in the same message or thread.
+- States a fact that conflicts with the codebase or prior context.
+- Asks for something infeasible, unsafe, or out of scope without acknowledging trade-offs.
+- Uses the wrong term for a concept (e.g. deploy vs rebuild) in a way that would cause wrong action.
+
+Format: name the issue → why it matters → proposed correction or question. Do not silently comply with a broken premise.
+
+## Reply shape (clarification turns)
+
+Exempt from `tokens_economy` brevity: 1–2 sentences framing, restatement, challenges (if any), then questions. No implementation until gates pass.
+
+## Example
+
+> You want recurring jobs to survive restarts — before I plan: should activation be idempotent on duplicate API calls, and is “survive restart” only process crash or also full `aws-infra-down`? Also, “deploy the fix locally” sounds off — we patch in git and rebuild containers; is that what you mean?

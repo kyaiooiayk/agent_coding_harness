@@ -1,0 +1,52 @@
+---
+description: >-
+  TDD depth — unit tests mandatory on behaviour change, bug fixes, and reported gaps.
+  Failing test first, then implementation. E2E when testing_strategy triggers apply.
+  Hotline punchline: harness-hotline.mdc (always on). Open this file when writing tests.
+alwaysApply: false
+---
+
+# TDD (test-driven development)
+
+**Disclosure:** Tier C (on demand). Punchline always on in `.cursor/rules/harness-hotline.mdc`.
+
+**Default:** behaviour change without a new or updated test is **incomplete handback**. Unit tests are not optional decoration — they are how this repo records invariants.
+
+## When unit tests are required (not optional)
+
+Add or extend a unit test **in the same change** when **any** of these apply:
+
+| Trigger | Test must prove |
+|---|---|
+| **New or changed behaviour** | Logic, validation, error paths, return values, persisted fields, stream/API shape |
+| **Store write-path change** | Persisted store/file state under `data/store/` — failing test before product edit |
+| **Bug fix** | Repro encoded as a failing test **before** product-code edit (`.cursor/rules/fix-root-cause.mdc`, `.cursor/rules/prove-bug-with-test.mdc`) — handback cites test path |
+| **User reports a gap** | Missing coverage for the scenario they named — write the test they are asking for |
+| **New module, handler, tool, or component** | Happy path + meaningful branches (not “imports without error”) |
+| **Refactor that could change behaviour** | Existing tests updated or new tests lock the contract |
+
+**Only skip a new test when:** the diff cannot change runtime behaviour (comments, pure docs/typo), **or** the user explicitly asks for test-after.
+
+**Anti-patterns (reject):**
+
+- Implement first, hand back without a test — forbidden unless test-after was requested.
+- “Existing suite still passes” — not sufficient when behaviour changed; old tests may not encode the new invariant.
+- Symptom-only assertion (e.g. “function was called”) without checking **output type and shape** when callers consume the result — see `.cursor/rules/test-doubles.mdc` § Over-mocking red flags.
+- Asserting implementation details only (mock call order) when an outcome assertion is available — see `.cursor/rules/test-doubles.mdc`.
+
+Full trigger lists and examples: `docs/testing_strategy.md` § **When unit tests are required** and § **Output type and format**.
+
+## Order
+
+0. **Reproduce first (bugs)** — confirm the failure before writing the test (`.cursor/rules/fix-root-cause.mdc`, `.cursor/skills/how-to-prove-a-bug/SKILL.md`). Manual repro or an existing failing test counts.
+1. **Failing test first** — unit test closest to the change (Vitest under `frontend/`, pytest under `api/tests/`).
+2. **Minimal implementation** — smallest diff that makes the test green.
+3. **E2E when required** — after unit tests pass, add or extend `e2e_test/` **in the same change** when any trigger in `docs/testing_strategy.md` § **When E2E is required** applies (uploads, user-visible HTTP errors, BFF routes, React screens, cross-service wiring). “E2E last” is **order**, not **optional**.
+4. **Handback gate** — do not claim done on unit tests alone when E2E triggers applied; name the `make e2e-test file=…` command run or pending rebuild.
+5. **In-turn test run** — on product edits, run `make test parallel=true` before handback; fix failures in the same turn (`.cursor/rules/agent-test-gate.mdc`). Faster unit-only escape: `make test-agent-stop` when E2E is out of scope — the stop hook still runs full `make test parallel=true` after turn end (backup, not a substitute).
+
+**Parallel-safe tests** — `make test parallel=true` is common here. Do not read or write fixed paths (`/tmp/...`, repo files) shared across tests; use `tmp_path` and env overrides on subprocess/shell entrypoints. See `docs/testing_strategy.md` § Parallel pytest.
+
+Full workflow: `.cursor/skills/how-to-code/SKILL.md` (step 3). Coverage and gates: `docs/testing_strategy.md`. **How much to mock:** `.cursor/rules/test-doubles.mdc`, `knowledge/avoid_mock_testing.md`, `knowledge/mock_vs_stub_testing.md`. API-first pairs with TDD (contract before code): `knowledge/api_first_paradigm.md`.
+
+**E2E session cleanup:** when editing `e2e_test/`, follow `.cursor/rules/e2e-session-cleanup.mdc` — register every created session; never bypass the autouse guard.

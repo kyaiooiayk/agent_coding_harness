@@ -1,0 +1,10 @@
+---
+description: Do not restart, rebuild, or stop containers unless the user explicitly asks.
+alwaysApply: true
+---
+
+# Docker ops boundary
+
+- Never run `make` targets, `docker compose`, or any command that **restarts, rebuilds, or stops** containers unless the user explicitly asks in the current message.
+- Do **not** tell the user to run `make dev-build` after your own product-code edits — the **stop** gate `stop-gate-on-stop.sh` (`.cursor/hooks.json`) rebuilds affected services automatically before tests.
+- Editing `docker-compose.yml` is allowed; validating with `docker compose config` is allowed. Starting/stopping the stack is not unless asked.

@@ -1,0 +1,66 @@
+---
+description: New or changed Make targets must appear in make help; run make help-check before handback.
+globs: make/**,Makefile
+alwaysApply: false
+---
+
+# Makefile ↔ make help sync
+
+Skill workflow: `.cursor/skills/how-to-sync-make-help/SKILL.md`.
+
+## Invariant
+
+Every **operator-facing** `.PHONY` target or real recipe in `make/*.mk` or `Makefile` must be discoverable via `make help` (full index) or `make help <topic>` (section).
+
+**Hidden targets stay out of the Makefile** — hook-only glue, internal `_`-prefixed helpers, and CI-only aliases belong in scripts (e.g. `.cursor/hooks/`) or inline shell, not as undocumented Make targets.
+
+## When adding or changing a Make target
+
+1. **Same change** — update `make/help.mk`: the matching `HELP_<SECTION>` block **and** its `HELP_<SECTION>_ONLY` twin (both must stay in sync).
+2. **Section** — pick the topic from `HELP_SECTIONS` in `make/help.mk`. New sections need:
+   - entry in `HELP_SECTIONS`
+   - index line in `HELP_SECTION_LINES`
+   - `define HELP_<SECTION>` + `define HELP_<SECTION>_ONLY`
+   - `<section>/help:` target
+   - `$(HELP_<SECTION>)` in the full `help:` recipe
+3. **Line format** — match siblings: `make <target>  – <one-line purpose>`; include key flags on the same line or in the section's flag notes.
+4. **Renames / deletes** — update or remove the help line in **both** blocks; grep for stale references in `.cursor/hooks/`, skills, and `docs/`.
+5. **Verify (mandatory)** — run `make help-check`, then `make help` or `make help <topic>` and confirm the target appears.
+
+## CLI flag allowlist (`make/validate.mk`) — must-do for CD
+
+`make/validate.mk` is the SSOT allowlist of `VAR=value` CLI flags per target. Top-level `make <target> VAR=...` **fails at parse time** (`Unknown flag 'VAR=...' for target(s) <target>`) unless `VAR` is registered in `_allowed` for that goal.
+
+**Standard procedure — anything a CI/CD (or operator) command passes on the command line must be made available here first.** When a target reads an override (e.g. `FOO ?= default` consumed as `make target FOO=...`):
+
+1. Add a guarded block in `make/validate.mk`:
+   ```make
+   ifneq ($(filter <target>,$(_goals)),)
+   _allowed += FOO
+   endif
+   ```
+2. Add a regression case in `scripts/check-make-cli.sh`: `must_ok "<target> FOO" make -n <target> FOO=value`.
+3. Verify: `make -n <target> FOO=value` parses (no `Unknown flag`), then `./scripts/check-make-cli.sh`.
+
+This is non-negotiable for any flag used in `.github/workflows/*` — CD invokes the top-level `make`, so an unregistered flag breaks the pipeline (not just local use).
+
+## Handback (mandatory)
+
+When this diff touches Make targets, tell the user:
+
+- what was added, renamed, or removed;
+- which help section documents it (`make help <topic>`);
+- any new flags or changed default behaviour (and their `make/validate.mk` allowlist entry).
+
+Do not finish a Makefile-only task without either updating help or explicitly stating why the target is internal (and therefore must not live in `make/*.mk`).
+
+## Anti-patterns
+
+- New target in `make/test.mk`, no line in `HELP_TEST` / `HELP_TEST_ONLY` (e.g. `test-agent-stop` before fix).
+- Evaluation targets only under `make help test` — they belong in `make help evaluation` with a cross-ref from Tests.
+- `HELP_SECTIONS` updated without `HELP_SECTION_LINES` — `make help-check` fails.
+- Documenting a target only in README/skills/hooks but not in `make help`.
+- Duplicating target lists in a third place — `make help` is the CLI SSOT; runbooks link to it, not copy-paste full tables.
+- Adding a target that reads a `VAR=...` override (or wiring one into `.github/workflows/*`) without registering `VAR` in `make/validate.mk` `_allowed` — CD fails at parse time with `Unknown flag`.
+
+Procedure-change checklist: `.cursor/skills/how-to-document-procedure-changes/SKILL.md`.

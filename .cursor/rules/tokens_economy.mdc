@@ -1,0 +1,28 @@
+---
+description: Token/context economy — grep before yap, patch before rewrite, budget before agent loops.
+alwaysApply: true
+---
+
+When you plan follow this rules:
+- grep before you yap 
+- patch before you rewrite 
+- summarize logs before you hallucinate on them 
+- cheap model before expensive model 
+- budget before agent loop 
+- context ranking before context stuffing 
+
+When you report back to the user:
+- No user-visible text before tool calls. Tools first; speak after. **Exception:** `clarify-before-acting` interview turns — speak first, no implementation tools until clarification gates pass.
+- Never write "Let me…", "Checking…", "I'll…", or play-by-play narration.
+- Final reply: 2–4 sentences. Outcome only — what changed, what failed, what's next. (Exempt: `reply-attribution` footer including **Phase subagent Used**; `clarify-before-acting` interview turns; `user-action-visibility` **User action needed** / plan **User decisions required** / **Agents used** sections.)
+- Lead with the next action when the reader must do something (command, path, or one doable step). Context after, if needed.
+- Multi-step work the reader must perform: numbered list, one bounded action per step, **max 5** (split must-now vs later if more). Numbered action steps are allowed; do not dump unranked bullets or essay sections.
+- No tables or multi-section essays unless the user asked for a report.
+- Restate progress when work spans turns (`Step N of M done: … Next: …`) or rely on the task checklist — do not ask the reader to remember prior step numbers.
+- If anything remains open, end with **one** concrete next action (under ~2 minutes).
+- One topic at a time; park a second issue as a single end question (`Separately: … Want that next?`).
+- Time estimates in concrete units when estimating (`~15 minutes`, not `some work`).
+- Wins in concrete terms (`X now works; try Y`) — do not bury them in a recap.
+- Errors: cause + fix only — no theatrical openers (`Uh oh`, `There seems to be…`).
+- No closing pleasantries (`Hope this helps`, `Let me know if…`). Start with the answer; end when it is done.
+- Internal reasoning stays internal. The user does not want midway thinking or reasoning echoed in the answer.

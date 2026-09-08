@@ -1,0 +1,126 @@
+---
+description: Mandatory information-flow diagrams in every README and architecture doc; four-level C4 placement required.
+alwaysApply: true
+---
+
+# Documentation diagrams
+
+Graphs and information flow are **mandatory**, not optional decoration. A README without a diagram is **incomplete** — do not hand back or merge prose-only README work.
+
+Canonical C4 reference: `knowledge/c4_model_software_diagram.md`. This project's containers/owners: `docs/architecture.md`.
+
+## Scope (no exceptions)
+
+Applies to **every** `README.md` under:
+
+- `api/`, `frontend/`
+- `scripts/**` when they own non-trivial operator logic
+- Any folder README created for non-trivial domain or infrastructure logic (`.cursor/rules/code_style.mdc`)
+
+**Exempt:** `tests/` trees, `__init__.py`-only re-exports, trivial one-file helpers with no README.
+
+## Required README section
+
+Every in-scope README **must** include a level-2 heading:
+
+```markdown
+## Information flow
+```
+
+Immediately under that heading: **at least one** diagram (prefer **Mermaid**). Place it **after** the one-paragraph summary and **before** "What this folder owns", module layout, or API tables.
+
+Diagram must show at least one of:
+
+- **Information flow** — who calls whom, request/response path, event stream
+- **State or lifecycle** — transitions the reader must not misread from prose alone
+- **Data ownership** — source of truth vs derived (link `docs/create_conflicts.md` when relevant)
+
+Prefer Mermaid types: `flowchart`, `sequenceDiagram`, `stateDiagram-v2`. Plain `text` or ASCII only when Mermaid adds no clarity.
+
+**C4 placement (all four levels)** — under the heading, list **Context → Container → Component → Code** so the reader sees where this folder sits top-to-bottom. One sentence per level; link upward when a parent README already owns the story (e.g. `api/README.md` for the API container).
+
+```markdown
+- **Context** — …
+- **Container** — …
+- **Component** — … (primary diagram below)
+- **Code** — …
+```
+
+Draw **one** diagram at the **primary** level for this README (usually **Component** for in-service modules; **Container** for `api/` / `frontend/`). Label it, e.g. `Primary diagram (Component):`. Deeper levels stay one line; do not duplicate parent Context/Container diagrams — compress and link.
+
+## Local vs remote
+
+This repo defaults to **local Compose / local process only** (no cloud dual-deploy story unless `PRODUCT.md` / `docs/` define one).
+
+### When required
+
+Add **`## Local vs remote`** whenever Compose vs host-run vs unit-test stand-ins differ (ports, volume mounts, in-memory fakes).
+
+### What to show
+
+1. **Prose or table** — Compose path vs host-run vs test fakes; cite env vars (`<STORE_PATH_ENV>`, etc.).
+2. Prefer a **selection** diagram when more than one path exists; otherwise a **Single path** one-liner.
+3. **Invariant** — do not document imaginary cloud backends.
+
+### When not a fork
+
+Use **`## Local vs remote`** with: **Single path** — identical in Compose and local import (name any docs-only tooling).
+
+### Section separators
+
+Between major level-2 (`##`) sections, insert a markdown horizontal rule on its own line:
+
+```markdown
+## Section A
+
+…
+
+---
+
+## Section B
+```
+
+Do not put `---` between `###` subsections unless the README is long enough that the author deliberately wants mid-section breaks. Do not rely on trailing-only `---` as a substitute for between-section rules.
+
+## C4 model (architecture docs)
+
+Architecture and cross-service docs use the same four-level placement plus one diagram at the primary level:
+
+| Level | Placement line | Diagram when primary |
+|-------|----------------|----------------------|
+| Context | Product boundary, external actors | System + neighbours |
+| Container | Deployable units, data ownership | Apps/data stores + protocols |
+| Component | Modules inside one container | Major components + dependencies |
+| Code | Files or modules to edit | Rare — link to code; repo is the Code diagram |
+
+When a README spans multiple services, the **Container** line names every touched service; the diagram is Container-level unless the change is module-local.
+
+## Agent gate (before handback)
+
+When you create or substantially extend an in-scope README, verify:
+
+1. `## Information flow` section exists with a diagram block (fenced `mermaid` or `text`).
+2. All four C4 placement lines (Context → Container → Component → Code) are present; diagram matches the stated primary level.
+3. Arrows and boxes are **named** (services, stores, protocols) — no mystery boxes.
+4. Diagram is **early** in the file (before tables that duplicate the same story).
+5. **`## Local vs remote`** is present (real fork table + selection diagram, or explicit **Single path** one-liner) — see above.
+6. Major `##` sections are separated by `---` horizontal rules.
+
+If any check fails, add the diagram / local-vs-remote / separators **in the same change** as the README prose. Tables and bullet lists do **not** substitute for a diagram.
+
+## When editing docs
+
+- **New or substantially extended README** — diagram required in the same edit; never defer.
+- **Procedure/runbook in `docs/`** — flow diagram when steps branch, retry, or cross service boundaries (when steps branch).
+- **Plans** — non-trivial plans must include at least one Mermaid diagram (`.cursor/skills/how-to-plan/SKILL.md`).
+
+## Anti-patterns
+
+- Prose-only README with ownership tables but no `## Information flow` (e.g. `scripts/**/README.md`).
+- Long narrative replacing a diagram the reader would scan in seconds.
+- Unlabelled arrows or mystery boxes.
+- Single C4 level label with no Context/Container/Code placement — reader cannot see why this folder exists.
+- Full Context/Container diagrams copied from a parent README — compress to one line and link up instead.
+- Drawing local and remote backends as simultaneous parallel peers when only one is wired per process.
+- Omitting **Local vs remote** when Compose vs host-run already forks the path.
+- Touching a README and leaving major `##` sections without intervening `---`.

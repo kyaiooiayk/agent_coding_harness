@@ -1,0 +1,70 @@
+---
+description: >-
+  Test-doubles depth — fidelity ladder, over-mocking red flags, state verification.
+  Hotline punchline: harness-hotline.mdc. Open when choosing mocks/stubs/fakes.
+alwaysApply: false
+---
+
+# Test doubles (mocks, stubs, fakes)
+
+**Disclosure:** Tier C (on demand). Punchline always on in `.cursor/rules/harness-hotline.mdc`. Model: `docs/agent_context_disclosure.md`.
+
+Rationale: `knowledge/avoid_mock_testing.md`, `knowledge/mock_vs_stub_testing.md`. Gates: `docs/testing_strategy.md`, `.cursor/rules/tdd.mdc`. Frontend Vitest detail: `.cursor/rules/frontend-test-mocking.mdc`. Workflow gates: `.cursor/skills/how-to-code/SKILL.md` (TDD step + self-check), `.cursor/skills/how-to-plan/SKILL.md` § Test design.
+
+## Fidelity ladder (pick the highest that fits)
+
+1. **Real implementation** — production code in-process when fast, deterministic, self-contained.
+2. **Fake** — in-memory or local substitute with the same contract (`MemorySessionStore`, stateful stub that GET/PATCH share).
+3. **Stub** — predetermined query data; **verify outputs/state**, not call order.
+4. **Mock** — verifies **which command/side effect** ran — lowest fidelity; interaction must be the behaviour under test.
+
+**Sticky:** stubs/fakes for **queries**; mocks for **commands**. Default to **state verification** (`docs/testing_strategy.md` § Output type and format).
+
+## Test layer ownership (do not mock-only these)
+
+| What broke in prod | Required proof | Wrong sole proof |
+|---|---|---|
+| SPA → FastAPI → `data/store/` (create, archive, nested add) | `e2e_test/<resources>/` via Playwright | `vi.stubGlobal("fetch")` + `toHaveBeenCalledWith` alone |
+| React Building / API / Services tab UI | Real component under `frontend/tests/` or E2E | Mock the component under test |
+| Pure helpers (`<resource>Stats`, `jsonLeafPatch`, latency stats) | Unit test on **real module**, assert return value | Mock the module under test |
+| Browser APIs (`fetch`, `localStorage`) | Local stub at trust boundary | — |
+
+**Rule:** If the bug is “user sees wrong/empty data,” the test must assert **user-visible state** (DOM text, select value, list items) or **HTTP response body** — not that a mocked fetch function was invoked.
+
+## Over-mocking red flags (reject)
+
+| Do not | Do instead |
+|---|---|
+| Assert `fetch` was called with a URL as **only** proof a screen loaded | `expect(screen.getByText('…'))` or E2E; stub `fetch` per `.cursor/rules/frontend-test-mocking.mdc` |
+| Stub PATCH/POST return ≠ stub GET state (save “works” in mock, UI reload shows old data) | Stateful fake: one in-memory object both stubs read/write |
+| Vitest re-implements full user journey with every API mocked | E2E when `docs/testing_strategy.md` § When E2E is required applies |
+| `mock.assert_called()` without output shape | Assert what callers/users consume |
+| Mock every dependency by default | Prefer real modules + `fetch` stub / `InMemory<Resource>Repository` / `tmp_path` store |
+| Duplicate production logic inside a stub | Minimal fixed data; behaviour lives in real code or owned fake |
+
+## Unit vs E2E (both, different jobs)
+
+- **Unit:** invariants in one module (utils, hooks, store methods) — real code preferred inside the boundary. Frontend specs: `frontend/tests/`.
+- **E2E:** wiring across tabs, API, and persistence — **no substitute** when triggers in `docs/testing_strategy.md` § When E2E is required apply.
+- “E2E last” = order after unit tests, **not** optional when triggers apply.
+
+## Repo examples (prefer these patterns)
+
+| Good | Why |
+|---|---|
+| `frontend/tests/<resource>Stats.test.ts` | Real `compute<Resource>Stats` — no network mock |
+| `frontend/tests/JsonTree.test.tsx` | Real `JsonTree` + RTL DOM assertions |
+| `frontend/tests/App.test.tsx` | `fetch` stub router; asserts visible text / alerts |
+| `e2e_test/<resources>/test_archive_building.py` | Compose + Playwright; archive UI + API state |
+| `api/tests/test_action_persistence.py` | Asserts persisted store files under `tmp_path` |
+
+| Bad (removed or avoid) | Why |
+|---|---|
+| `expect(fetch).toHaveBeenCalledWith('/api/<resources>')` only | Proves mock wiring, not that resources appear |
+| Putting Vitest specs under `frontend/src/**` | Specs belong in `frontend/tests/` (`vite.config.ts` include) |
+
+## Agent gate before handback
+
+1. New/changed UI or BFF behaviour → is there **DOM or E2E** proof, not only mock call assertions?
+2. Bug fix for “empty/wrong screen” → repro uses **visible outcome** or **real HTTP body**?
+3. If `vi.mock` spans a whole module → justify in test comment or switch to partial mock / E2E.

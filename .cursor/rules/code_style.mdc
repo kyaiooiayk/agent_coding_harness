@@ -1,0 +1,92 @@
+---
+description: Code style, FE/BE boundaries, API semantics, and README requirements for contributors and agents.
+globs:
+alwaysApply: true
+---
+
+# Code style and architecture boundaries
+
+## Single source of truth
+
+- One resource must have **one owner** for existence. Derived state must not outlive the owner.
+- Define the **invariant** linking stores and enforce it on **write** — not by reconciling on **read**.
+- Read-time filters are never an acceptable primary fix for corrupt store data. Create collision policy: `docs/create_conflicts.md`.
+
+## Division of responsibility
+
+- Frontend should never do backend work; backend owns domain logic and filtering.
+- Frontend renders API payloads as-is — presentation only, no lifecycle/business filtering of resources.
+- The API must not paper over a bad write on `GET`; keep `data/store/` correct on create/update/delete.
+
+## API and resource semantics
+
+API-first: define the contract before implementation (`knowledge/api_first_paradigm.md`). CRUD lifecycle and HTTP semantics: `knowledge/CRUD_principles.md`.
+
+- Never use fallback solutions unless specifically asked.
+- Never implicitly create, restore, or resurrect a resource when the caller provided an explicit identifier and lookup returns not found.
+- Missing resource on write/update with explicit id → hard error (404/domain error), not fallback create.
+- Auto-create only on endpoints whose contract declares create semantics and the identifier is omitted.
+- Hard-deleted (tombstoned) resources are terminal unless an explicit restore workflow exists.
+- Never silently skip or log-and-continue when required configuration or contract is missing — raise immediately.
+- Never use emoji in code or comments.
+
+## Code style
+
+- All imports at top of file — no imports inside functions (except circular dep, optional feature, heavy rarely-used module).
+- No inline comments in code body — use docstrings. No comment above a function describing what it does.
+- Every function with non-trivial logic needs a docstring (business rules, invariants, non-obvious paths, pre/postconditions). Simple getters and pure delegation do not.
+- Write code for human review — occasionally more verbose is better.
+
+## Logging
+
+- Use the **`logging`** module for all diagnostic output in product code (`api/`). **`print()` is forbidden** in those paths.
+- Prefer lazy `%s` formatting: `logger.info("… resource_id=%s …", resource_id, …)` — not f-strings or concatenation in the message.
+- Declare `logger = logging.getLogger(__name__)` at module level.
+- Tests use pytest/`caplog`, not stdout assertions.
+
+## Import placement
+
+```
+Is the dependency needed by most of the module?
+├─ Yes  → Import at top of file
+└─ No
+   ├─ Circular dependency?      → Local import OK
+   ├─ Optional feature?         → Local import OK
+   ├─ Heavy rarely-used module? → Local import OK
+   └─ Otherwise                 → Import at top
+```
+
+## Documentation requirements
+
+Diagrams are mandatory — see `.cursor/rules/documentation-diagrams.mdc`. Every in-scope README needs a `## Information flow` section with Context→Container→Component→Code placement, a primary-level diagram, **`## Local vs remote`** (Compose vs local uvicorn, or **Single path** one-liner), `---` between major `##` sections (`knowledge/c4_model_software_diagram.md`). Prose-only READMEs are incomplete.
+
+New or substantially edited markdown under `docs/`: OKF frontmatter per `.cursor/rules/okf.mdc`; update `docs/index.md`. **`knowledge/`:** humans add files; agents may only add or refresh frontmatter on existing files — no new knowledge files, no body edits. **`api/README.md` / `frontend/README.md`:** not OKF — `documentation-diagrams.mdc` applies.
+
+### Folder README (significant logic)
+
+When you create or substantially extend a folder with **non-trivial domain or infrastructure logic**, add/update `README.md`:
+
+1. **What the folder owns** — responsibilities vs non-responsibilities
+2. **Information flow** — required `## Information flow` heading + four-level C4 placement + primary diagram (Mermaid preferred); ship in the same edit as prose
+3. **Local vs remote** — Compose vs local-dev stand-ins, or **Single path** one-liner — `.cursor/rules/documentation-diagrams.mdc`
+4. **Module layout** — file → role table
+5. **Key invariants** — especially store ownership (`docs/create_conflicts.md`, `api/README.md`)
+6. **Callers / links** — owning package README or `docs/` contract
+7. **Section separators** — `---` between major `##` headings
+
+**Examples:** `api/README.md`, `frontend/README.md`.
+
+**No README for:** `tests/` trees, `__init__.py`-only re-exports, trivial one-file helpers.
+
+Link new package READMEs from the owning service or parent package README.
+
+### Service README
+
+`api/` and `frontend/` must keep a `README.md`: what it does, request-flow diagram, API or UI table, configuration, design notes. Write it with the code, not after.
+
+## Design principles
+
+- **SOLID** — structure code for single responsibility and safe extension: `knowledge/SOLID_principles.md`.
+- **DRY** — each piece of logic or knowledge lives in one place: `knowledge/DRY_principles.md`.
+- **CRUD** — resource create/read/update/delete contracts and HTTP semantics: `knowledge/CRUD_principles.md`.
+- **Service architecture** — avoid chatty calls, wrong boundaries, shared DB access across services: `knowledge/anti-patterns_service_architecture.md`.

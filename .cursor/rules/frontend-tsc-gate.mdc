@@ -1,0 +1,39 @@
+---
+description: Run npm run build (tsc) after frontend edits; Vitest alone does not gate Docker dev-build.
+alwaysApply: false
+globs: frontend/**/*,api/**/*
+---
+
+# Frontend TypeScript build gate
+
+**Styling / dark-light contrast:** `.cursor/rules/frontend-styling.mdc` — CSS tokens, night/day checklist, component CSS patterns.
+
+Vitest (`npm test`) does **not** run `tsc`. The Docker frontend image runs `npm run build` (`tsc && vite build`). A change can pass unit tests and still fail `make dev-build`.
+
+## Before handback on frontend edits
+
+Run from `frontend/`:
+
+```bash
+npm run build
+```
+
+Or at minimum `npx tsc --noEmit` when the change is types-only.
+
+## API client calls
+
+Match the **exported function signature**, not a nearby pattern from another feature. Example: `fetchConversations(sessionType?)` filters by `session_type` (`standard` | `job` | `run`); it is not a tenant-id loader. Tenant scoping is enforced server-side on the BFF session.
+
+## BFF (`api/main.py`)
+
+New route handlers need matching **imports** (`response_model` types, `UploadFile`, `File`, etc.). `TestClient(app)` only fails at import time when the module loads — add a proxy test under `api/tests/` (see `test_attachments_proxy.py`) so missing imports break CI before `dev-build`.
+
+When copying load logic from another component, open `frontend/src/api/client.ts` and confirm parameter names and types before wiring.
+
+## Static routes before `{param}` routes
+
+Register fixed path segments **before** parameterized routes on the same prefix. Example: declare `GET /<resources>/stats` (or similar fixed segments) before `GET /<resources>/{building_id}` or FastAPI matches the fixed name as an id. Applies to `api/` routes.
+
+## Multipart file uploads (FastAPI)
+
+Any route using `UploadFile` / `File(...)` requires **`python-multipart`** in root `pyproject.toml` / API image deps. Without it the app fails at **import** with `Form data requires "python-multipart" to be installed`.

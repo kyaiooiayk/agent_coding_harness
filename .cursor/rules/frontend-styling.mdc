@@ -1,0 +1,115 @@
+---
+description: Frontend CSS, dark/light theme tokens, contrast, and component styling conventions.
+alwaysApply: false
+globs: frontend/**/*
+---
+
+# Frontend styling and theme
+
+Applies to all UI work under `frontend/`. Build/API pairing rules live in `.cursor/rules/frontend-tsc-gate.mdc`.
+
+## Stack constraints
+
+- **Plain CSS only** — no Tailwind, CSS-in-JS, or Sass unless explicitly requested.
+- **Global theme tokens** in `frontend/src/App.css` (GitHub Primer palette).
+- **Component styles** in a co-located `ComponentName.css` imported from the matching `.tsx`.
+- **Reuse shared shells** from `App.css` when they exist (`.modal-*`, `.app-header`, tab chrome, etc.).
+
+## Night / day mode (required on every UI change)
+
+This UI supports **dark** (default, "night") and **light** ("day") modes. Every new or changed surface must be readable in **both**.
+
+| Mechanism | Detail |
+|---|---|
+| React state | `App.tsx` — `useState<'dark' \| 'light'>` |
+| DOM hook | `document.body.dataset.theme` = `'dark'` or `'light'` |
+| Persistence | `localStorage` key `scaleai-theme` |
+| Bootstrap | `main.tsx` applies saved theme on `body` (and `html` when light) before React mount |
+| Toggle | Header button — label "Day" in dark mode, "Night" in light mode |
+
+Components that need the active theme in JS (canvas, particles) read `document.body.dataset.theme` or receive a `theme` prop — see `LandingPage.tsx`, `ParticleBackground.tsx`.
+
+## CSS token contract
+
+**Do not hardcode** `#…`, `rgb(…)`, `rgba(…)`, or named colors (`white`, `black`, `gray`) for backgrounds, text, or borders in component CSS. Use variables from `App.css`.
+
+| Token | Use for |
+|---|---|
+| `--bg`, `--bg-inset` | Cards, inputs, page shell |
+| `--surface`, `--surface-2` | Elevated panels, secondary fills |
+| `--border` | Borders, dividers, table rules |
+| `--text`, `--text-muted` | Primary and secondary copy |
+| `--accent`, `--accent-hover` | Links, highlights, emphasis |
+| `--error`, `--error-text`, `--error-bg`, `--error-border` | Error and danger states |
+| `--radius` | Border radius (6px) |
+
+Dark values live on `:root`. Light overrides live in **`body[data-theme='light']`** in `App.css` only — not duplicated per component file.
+
+### Correct pattern
+
+```css
+.my-panel {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.my-panel select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+```
+
+Tokens flip when the user toggles theme. **Do not** add redundant blocks like:
+
+```css
+/* WRONG — restates the same vars for both themes; delete these */
+body[data-theme='dark'] .my-panel { color: var(--text); }
+body[data-theme='light'] .my-panel { color: var(--text); }
+```
+
+If contrast breaks in one mode, fix the **token** in `App.css` or pick a different token — do not patch one theme with a literal hex in the component file.
+
+### Wrong patterns (reject)
+
+- Literal colors on surfaces or text in component CSS (`#ffffff`, `rgb(15, 23, 42)`).
+- Assuming light mode (e.g. white panel + `#333` text) without tokens.
+- Inline `style={{ background: '#…' }}` for theme-dependent UI — use a class + `var(--…)`.
+- Copy-pasting dark-theme rgba values from chart components into form/panel CSS.
+
+### When literals are allowed
+
+Only for **data visualization** accents that cannot map to a shared semantic token (timeline bars, latency histogram fills). Prefer:
+
+1. Add a named token pair to `App.css` (`:root` + `body[data-theme='light']`), or
+2. Read tokens at runtime — `LatencyTimeline.tsx` / `LatencyStats.tsx` use `getComputedStyle(document.documentElement).getPropertyValue('--…')`.
+
+## Contrast checklist (before handback)
+
+1. Toggle **Day / Night** in the app header — no invisible text, borders, or same-tone foreground+background.
+2. **Form controls** (`input`, `select`, `textarea`, native `button`): `color: var(--text)` on `background: var(--bg)` or `var(--surface)`; border `var(--border)`.
+3. **Helper / placeholder copy**: `var(--text-muted)`, not a one-off gray.
+4. **Errors**: `var(--error-text)` or `var(--error)`; error panels use `var(--error-bg)` + `var(--error-border)`.
+5. **Tables and lists**: header and cell text `var(--text)`; row borders `var(--border)`.
+6. **Modals**: extend `.modal-card` / `.modal-backdrop` from `App.css`; do not invent a parallel modal skin.
+
+Run `rg '#[0-9a-fA-F]{3,8}|rgb\\(|rgba\\(' frontend/src/components/YourComponent.css` — hits must be zero unless documented as chart-only.
+
+## Tests
+
+Vitest files live under **`frontend/tests/`** (not co-located under `frontend/src/`). `vite.config.ts` includes `tests/**/*.{test,spec}.{ts,tsx}`.
+
+| Concern | Where |
+|---|---|
+| DOM / RTL outcomes | `frontend/tests/App.test.tsx`, `frontend/tests/JsonTree.test.tsx`, `frontend/tests/ServicesPage.test.tsx` |
+| Both themes render content | `it.each(['dark', 'light'] as const)` + `document.body.dataset.theme = theme` before `render()` — add under `frontend/tests/` when the surface needs it |
+| CSS uses tokens not literals | Static read of the CSS file in a `frontend/tests/*.test.ts(x)` — assert key selectors contain `var(--text)` / `var(--bg)` and no literal `color:` / `background:` hex |
+
+When adding a component CSS file with themed surfaces, add that token test in the same change.
+
+## Related
+
+- Human-readable overview: `frontend/README.md` § Styling and theme
+- TypeScript / BFF gate: `.cursor/rules/frontend-tsc-gate.mdc`
+- Stack summary: `.cursor/rules/stack.mdc` § Frontend styling and UI

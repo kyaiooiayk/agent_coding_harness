@@ -1,0 +1,50 @@
+---
+description: Git branch, rebase, PR, and merge workflow — agent rebases before handback; user reviews merge-ready diff; user merges.
+alwaysApply: true
+---
+
+# Branch and PR workflow
+
+Full runbook: `.cursor/skills/how-to-branch-and-pr/SKILL.md`. Optional human log: `ticket_history.md`.
+
+## Session gate (read first — non-negotiable)
+
+**Each Cursor agent chat tab is one PR.** A new tab/thread is a **new session** even in the same repo, same branch checked out, or with a dirty tree left by another chat.
+
+**Before the first `Write`/`StrReplace` in this tab** (including `.cursor/`, `docs/`, lint-only, or harness fixes):
+
+1. `git branch --show-current` — if the branch name matches **another session's ticket/work**, do **not** keep editing on it.
+2. `git status` — list pre-existing dirty paths; they are **foreign** to this PR unless the user explicitly folds them in here.
+3. **This tab → this branch:** when git works: `git checkout main && git pull` (if remote exists), then `git checkout -b <project-prefix>-(<tag>)-<slug>`.
+
+| Reject | Do instead |
+|---|---|
+| New chat, still on another tab’s feature branch, agent edits here | This tab creates **its own** branch before any edit |
+| "Harness / lint only — skip branch" | Branch required for **every** tracked path, including `.cursor/` |
+| Append this tab’s fix to another session’s open PR | One tab → one branch → one PR scope |
+| Wait until "commit" or "open PR" to branch | Branch **before** the first edit in **this** tab |
+
+If `.git` is incomplete (no objects / not a repo), **say so once**, skip branch commands, and edit in place — do not fake a git history.
+
+Never append this tab’s edits onto another session’s branch unless the user **explicitly** combines PRs in this thread.
+
+## Mandatory sequence (when git works)
+
+1. Pull / update main before any new branch when a remote exists.
+2. Feature branch before first repo edit: `<project-prefix>-(<tag>)-<kebab-slug>` (parentheses — git forbids `[` `]` in ref names). Title/commit: `<project-prefix>-[<tag>] - <words with spaces>`.
+3. One Cursor chat tab = one agent session = one PR scope.
+4. Scope gate before handback: `git status` / diffs must match **this session’s** edits only.
+5. Agent rebases onto latest main before handback when possible; semantic conflicts → stop and ask.
+6. **Handback is mandatory** — leave session edits **uncommitted**. Open with **WIP left uncommitted — you commit**. User commits, pushes, opens PR. Agent does **not** unless explicitly asked to commit.
+7. **User merges** — agents never `gh pr merge`.
+
+## Agent git permissions (hard boundary)
+
+| Action | Agent |
+|---|---|
+| `git checkout`, `git checkout -b`, edit files | Yes — during implementation |
+| `git fetch`, `git rebase`, stash/pop for rebase | Yes — before handback only |
+| `git commit` | **Never** unless the user **explicitly** asks in this thread |
+| `git push` / `gh pr create` / `gh pr merge` | **Never** |
+
+**"Create/open the PR"** means: hand back suggested title, body, and exact commands for **you** to run.

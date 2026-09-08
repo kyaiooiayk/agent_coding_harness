@@ -1,0 +1,39 @@
+---
+description: Before acting, surface blast radius — what else changes, what needs attention or clarification.
+alwaysApply: true
+---
+
+# Blast radius
+
+On **every** user message — question, plan, review, or implementation — ask internally before tools or code:
+
+**If I do exactly what I am told, what is the blast radius?**
+
+Surface collateral the user may not have named. Do not wait to be asked.
+
+## Check (mandatory)
+
+1. **Direct touch** — files, modules, services, APIs, schemas, migrations, config, env vars, Terraform/Compose.
+2. **Collateral** — unit/E2E tests, docs/READMEs, store files under `data/store/`, OpenAPI/UI consumers (`docs/create_conflicts.md`).
+3. **Runtime** — Compose rebuild, local uvicorn, sample JSON vs store wipe (`docs/local_dev_docker.md`).
+4. **Risk** — breaking changes, irreversible ops, scope creep, symptom vs root-cause (`.cursor/rules/fix-root-cause.mdc`).
+5. **Ownership / scope moves** — if the ask changes who owns a resource or which id scopes list/create/delete, do **not** stop at a prose blast-radius list. Fan out to UI tabs and API consumers per `.cursor/skills/how-to-plan/SKILL.md` when ownership changes.
+
+## When to speak up
+
+- Blast radius is **non-obvious** or **wider than the ask implies** → state it in the interview (`.cursor/rules/clarify-before-acting.mdc`) or before implementing.
+- Multiple approaches with different blast radius → name trade-offs; ask which collateral the user accepts.
+- **Narrow question** but a complete answer requires naming side effects → answer **and** state blast radius briefly.
+
+## When to stay quiet
+
+- Narrow factual lookup with zero collateral (e.g. "where is X defined?") — answer directly.
+- Prior turn locked scope and blast radius was already agreed.
+
+## Reply shape
+
+Weave blast radius into clarification turns — not a boilerplate section every time. When radius matters, one to three concrete bullets: *what else changes*, *what might break*, *what needs your call*.
+
+Example:
+
+> Adding a new nested create endpoint also needs `docs/create_conflicts.md`, an E2E path, and a `docs/` Guide how-to — want all three in this change or API-only for now?

@@ -1,0 +1,42 @@
+---
+description: When Cursor plan mode is active, bind planning to how-to-plan skill, doc reads, architecture alignment, and senior-engineer stance.
+alwaysApply: true
+---
+
+# Plan mode
+
+When the system reminder says **plan mode is active**, or the user asks for a plan, plan mode, or `CreatePlan`:
+
+1. **Read and follow** `.cursor/skills/how-to-plan/SKILL.md` before research or `CreatePlan`.
+2. **Read gate** — do not call `CreatePlan` until the skill's Read gate is satisfied: affected docs read via the Read tool, not grep/search alone.
+3. **Output contract** — every major choice uses inline **Decision** + **Basis**; plans that touch agent/MCP/API/UI include a mandatory **E2E verification** section per the skill.
+4. **No deferral** — one plan covers the full stated goal (implementation + E2E). Forbidden: `Deferred:`, `Phase 1 only`, parking refactors in Phase 2. Phased delivery only when the user explicitly requests multi-release scope (skill § Phased delivery exception).
+5. **E2E is not optional in plans** — unit tests alone do not satisfy verification when the skill's E2E triggers apply; the plan must name `e2e_test/` files and `make e2e-test file=…` proving the **full goal**.
+6. **New MCP tools** — plans must include the skill's **New MCP tool checklist**: `/tools/catalog` + admin **Tools tab** Playwright E2E (not `/tools/summary` alone); observability proxy path matches `frontend/src/api/observability.ts`.
+7. **Interview first** — `.cursor/rules/clarify-before-acting.mdc` still applies; non-trivial scope needs C4 containers and owners per `docs/architecture.md` (method: `knowledge/c4_model_software_diagram.md`).
+8. **Numbered revision + feedback log (mandatory)** — every plan body **starts** with `## Revision N` (first draft: `Revision 1 — Initial draft`; each update increments N). Include **Prior revision**, a **Feedback processed** table (each user *comment or constraint since the last revision* marked **Accepted** or **Rejected** with plan impact — rejections must cite doc/invariant/scope; no silent drops), and a **Summary** of net change. Then rewrite the full plan body to match; do not append-only patch notes (skill templates). **Feedback processed** is the *delta since the prior revision* — it does **not** replace the requirements ledger in items 9–10.
+9. **Requirements extracted (mandatory)** — immediately after the Revision block (and before **User decisions required**), add `## Requirements extracted`. Extract **every askable deliverable** from the user's messages for this plan (features, APIs, UI, tests/E2E, docs, config/Terraform/Compose, deploy/ops, out-of-scope asks the user named, constraints, success criteria). Use a numbered list (`R1`, `R2`, …). Do **not** silently drop, merge away, or paraphrase into a vague goal — one row-worthy ask = one `Rn`. On later revisions, keep the full cumulative list (add new `Rn` for new asks; do not renumber accepted items).
+10. **Requirements disposition (mandatory)** — immediately after **Requirements extracted**, add `## Requirements disposition` with a markdown table that covers **every** `Rn` from that section:
+
+   | ID | Requirement | Status | Reason |
+   |----|-------------|--------|--------|
+   | R1 | … (same wording as extracted, or a one-line restatement) | Accepted \| Rejected | If **Accepted**: short plan impact (where it lands). If **Rejected**: why — must cite doc, invariant, scope, or infeasibility; no silent drops. |
+
+   Status is only **Accepted** or **Rejected**. Partial acceptance → split into two `Rn` rows (accepted part + rejected part), do not use a third status. Every extracted requirement must appear exactly once. Rejections stay visible for the life of the plan (do not delete rejected rows on later revisions).
+11. **User decisions required + Agents used (mandatory)** — immediately after **Requirements disposition**: `## User decisions required` (or **None.**) per `.cursor/rules/user-action-visibility.mdc`; then `## Agents used` listing every research/critique Task launched while planning (or `None`). Templates in `.cursor/skills/how-to-plan/SKILL.md`.
+12. **Store impact Decision (when persistence / `data/store/` is touched)** — say how files/history change and cleanup/reset behaviour (`docs/local_dev_docker.md`, `docs/create_conflicts.md`).
+13. **Architecture alignment** — before `CreatePlan`, compare the user's goal and what already exists (code, APIs, stores) against routed docs and architecture (`docs/architecture.md`, `api/README.md`, `frontend/README.md`, `knowledge/anti-patterns_service_architecture.md`, `docs/create_conflicts.md`, and other Read-gate paths). Surface mismatches explicitly: what conflicts, what is already there, what the docs require. Do not plan around undocumented assumptions.
+14. **Senior engineer stance** — throughout planning, act as senior engineer per `.cursor/rules/skeptical-expert.mdc`: challenge weak designs, name tradeoffs and risks, prefer minimal correct change over novelty, push back when scope, boundaries, or ownership are wrong. Do not rubber-stamp the user's framing; disagree with evidence from docs and code.
+15. **Consumer fanout (ownership / scope moves)** — when the plan changes resource ownership, attach-vs-exist semantics, or list/upload/search id filters: follow `.cursor/skills/how-to-plan/SKILL.md` § **Consumer fanout gate** (code-intel `reference_fanout` or declared degrade; interview each UI/API consumer). Do not ship a plan that re-owns data but leaves list/detail consumers as unspoken defaults.
+16. **Exempt** — user explicitly says "no doc reads" or "just do it": still cite what you already know from prior turns in Basis blocks; architecture alignment, senior pushback, and consumer fanout (when triggered) still apply.
+
+**Plan body order (front matter, mandatory):**
+
+1. `## Revision N` (+ Prior revision, **Feedback processed**, Summary)
+2. `## Requirements extracted` (numbered `R1`…`Rn`)
+3. `## Requirements disposition` (table: ID | Requirement | Status | Reason)
+4. `## User decisions required`
+5. `## Agents used`
+6. Rest of plan (Overview, Decisions, E2E, … per skill)
+
+Put routing tables and full templates in the skill; keep plans actionable and proportional to scope. This rule is the **gate** for the requirements ledger even when the skill template has not been updated yet.

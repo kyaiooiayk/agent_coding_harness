@@ -1,0 +1,104 @@
+---
+description: Five-phase delivery loop — understand, grill, make it work, optimise, extensible — with mandatory phase report at handback; phases 3–5 use fresh subagents.
+alwaysApply: true
+---
+
+# Five-phase delivery
+
+Every **implementation task** (behaviour change, bug fix, feature, refactor with runtime effect) follows five phases **in order**. Do not skip ahead. Phases 1–2 run in the parent agent; phases 3–5 each use a **fresh subagent** (`Task` tool) so context stays impartial; the parent synthesizes and owns the phase report.
+
+**Phases 3–5 are mandatory** for implementation tasks. The parent agent must **not** implement product code inline and label it “Phase 3 only”, nor mark Phase 4 or 5 **skipped** without running the subagent first.
+
+Read-only Q&A, docs-only edits, and harness-only changes: report phases as **n/a** with one-line reason — still append **Phase report** at handback.
+
+## Phase 1 — Understand and interview
+
+- Split the user message into discrete requests or deliverables.
+- Restate the goal in one sentence; name scope, constraints, and definition of done.
+- Follow `.cursor/rules/clarify-before-acting.mdc`, `.cursor/rules/skeptical-expert.mdc`, and `.cursor/rules/blast-radius.mdc`.
+- **Gate:** no product-code edits until Phase 2 gaps are closed (or lighter pass applies per clarify rule).
+
+## Phase 2 — Interview / grilling
+
+- Stress-test assumptions before code; **challenge at least one premise with evidence** on non-trivial work (`.cursor/rules/skeptical-expert.mdc`). Prefer `.cursor/skills/grill-me/SKILL.md` (one hard question at a time when grilling; batched `AskQuestion` when choices are enumerable).
+- Resolve or explicitly defer open decisions; deferred items go in the phase report.
+- Non-trivial scope: C4 containers and owners per `docs/architecture.md`; plan per `.cursor/skills/how-to-plan/SKILL.md` when plan mode applies.
+- **Gate:** user alignment (or documented assumptions) before Phase 3.
+
+## Phase 3 — Make it work
+
+- Spawn a **new subagent** (`subagent_type`: `generalPurpose` unless read-only research → `explore`).
+- Prompt must include: approved goal, decisions from Phases 1–2, relevant rules/skills, **“Phase 3 only — minimal working code.”**, and the **attribution mandate** (below).
+- Failing test first on behaviour change (`.cursor/rules/tdd.mdc`); respect stack, boundaries, and service READMEs (`.cursor/skills/how-to-code/SKILL.md`).
+- Outcome: behaviour correct, tests green; polish and DRY deferred to Phase 4.
+
+## Phase 4 — Optimise
+
+- Spawn a **new subagent** with Phase 3 diff summary, **“Phase 4 only — optimise without changing behaviour.”**, and the **attribution mandate** (below).
+- Refactor for clarity, remove duplication, apply `.cursor/rules/ponytail.mdc` where it reduces code without new abstractions.
+- Re-run scoped tests; no behaviour drift.
+- **Always run** after Phase 3 for implementation tasks — even when the Phase 3 diff is small.
+
+## Phase 5 — Make it extensible / scalable
+
+- Spawn a **new subagent** with Phase 4 outcome, **“Phase 5 only — extension points and safe growth.”**, and the **attribution mandate** (below).
+- Align with SOLID/DRY/API-first where the task warrants it (`knowledge/SOLID_principles.md`, `knowledge/DRY_principles.md`, `knowledge/api_first_paradigm.md`); no speculative frameworks.
+- Document non-obvious extension seams in the owning README or module docstring when the change introduces a new boundary.
+- Complete plan leftovers: runbooks and how-tos under `docs/` (`local_dev_docker.md`, UI Guides, etc.), E2E when `docs/testing_strategy.md` triggers apply — **run** `make e2e-test file=…` when this session touched `e2e_test/**` (see Phase 5 E2E gate below).
+- **Always run** after Phase 4 for implementation tasks.
+
+## Attribution mandate (Phases 3–5 Task prompts — mandatory)
+
+Every Phase 3 / 4 / 5 Task prompt **must** include this instruction (verbatim or equivalent):
+
+> End your final reply with a **Used** block per `.cursor/rules/reply-attribution.mdc`. First bullet **must** be `- **what was changed:** <one short clause>` (or `none (checklist; zero edits)` when the phase made no edits). Then list every `.cursor/rules/*.mdc` and `.cursor/skills/*/SKILL.md` (and other `.cursor/` paths under **cursor:**) that influenced this phase — prefer repo-relative paths. Do **not** emit a Phase report table (parent owns it). Omitting **Used** or **what was changed** is a defect.
+
+Parent handback must then aggregate those child footers under **Phase subagent Used** (same rule file), keeping **what was changed** as the first bullet under each phase heading. Explore / specialist Tasks are out of scope for this aggregate.
+
+## When skipping a phase is allowed
+
+Use status **`skipped`** only when the subagent (Phases 3–5) or parent (Phases 1–2) ran and recorded **evidence** that nothing remains to do. **`n/a`** only for exempt task types below.
+
+| Phase | Allowed skip | Not allowed (run the phase) |
+|-------|----------------|-----------------------------|
+| 1–2 | Lighter pass per `.cursor/rules/clarify-before-acting.mdc` | — |
+| 3 | Never for implementation tasks | Collapsing all coding into the parent agent |
+| 4 | Subagent reports **zero** safe refactors after checklist (see below) | “Minimal diff”, “already clean”, todos complete, time pressure |
+| 5 | Subagent confirms every extension item from plan/rules is already done | “SSOT sufficient”, “README exists”, E2E files written but not run; Phase 5 prompts that waive `make e2e-test` |
+
+**Phase 4 checklist (subagent must walk it):** duplicated constants or logic, dead branches, naming, extract-only-when-DRY wins, ponytail without new abstractions.
+
+**Phase 5 checklist (subagent must walk it):** owning README seams, **`docs/` Guide how-to when user-visible steps changed** (`.cursor/rules/user-feature-guides.mdc`), built-in skill **only if** multi-step SOP warranted (not for atomic tools), Terraform/Compose env docs, E2E execution when triggered, `.cursor/skills/how-to-document-procedure-changes/SKILL.md` runbook sync.
+
+**Phase 5 E2E gate (mandatory when this session adds or changes `e2e_test/**`):** the Phase 5 subagent (or parent before handback) **must** run `make e2e-test file=…` for each touched E2E path and report pass/fail. Plain `pytest e2e_test/…` without the Playwright/`make e2e-test` harness does **not** count. If the Compose stack is down, handback status is **Blocked: stack down** with the exact command — not Phase 5 `done`. Phase 5 Task prompts **must not** say “do not run e2e-test”, “prefer unit only”, or treat stub E2E files as verified.
+
+If the subagent finds work, it implements it in that phase — do not defer to “future PR”.
+
+## Parent responsibilities
+
+- Branch + ticket before first edit (`.cursor/rules/branch-and-pr.mdc`).
+- Merge subagent outputs; fix conflicts; run `make test parallel=true` before handback on product edits (`.cursor/rules/agent-test-gate.mdc`).
+- Maintain session audit per `.cursor/skills/how-to-code/SKILL.md` § Task files.
+- **Attribution:** after Phase report + parent **Used**, append **Phase subagent Used** copying each Phase 3–5 child’s **Used** (first bullet **what was changed**, or `- **missing:** …` if absent) — `.cursor/rules/reply-attribution.mdc`.
+
+## Phase report (mandatory)
+
+Append **before** the parent **Used** block (`.cursor/rules/reply-attribution.mdc`) on **every** handback; when Phases 3–5 ran, follow with **Phase subagent Used**:
+
+```markdown
+## Phase report
+
+| Phase | Status | Summary |
+|-------|--------|---------|
+| 1 Understand & interview | done / skipped / n/a | … |
+| 2 Interview / grilling | done / skipped / n/a | … |
+| 3 Make it work | done / skipped / n/a | subagent: `<type>` or — |
+| 4 Optimise | done / skipped / n/a | subagent: `<type>` or — |
+| 5 Extensible / scalable | done / skipped / n/a | subagent: `<type>` or — |
+```
+
+**Status:** `done` = subagent ran and applied changes (or parent for Phases 1–2); `skipped` = subagent ran, checklist walked, **explicit reason** why zero work remained; `n/a` = task type exempt (say why). **`skipped` without a subagent run is invalid** for Phases 3–5 on implementation tasks.
+
+## Does not replace
+
+- TDD, test gate, root-cause fixes, E2E triggers, no-cloud-deploy, or branch-and-PR rules — phases sit **on top** of those skills.

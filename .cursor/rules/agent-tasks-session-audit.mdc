@@ -1,0 +1,45 @@
+---
+description: >-
+  Every ticket/session must maintain gitignored .agent_tasks audit files —
+  command.md (every Shell command + why) and lesson_learnt.md (ongoing lessons).
+alwaysApply: true
+---
+
+# Agent tasks session audit (every ticket)
+
+**Mandatory on every Cursor agent session / ticket** — not optional, not handback-only.
+
+Directory: `.agent_tasks/<session-id>/` where `<session-id>` is the last segment of `{{VSCODE_TARGET_SESSION_LOG}}` (or a stable ticket slug if that var is unset). **Gitignored** — do not commit these files.
+
+| File | Role |
+|---|---|
+| `command.md` | Append-only log of **every Shell tool command** run on the machine, each with a short what/why |
+| `lesson_learnt.md` | Ongoing append of non-obvious lessons learnt during implementation |
+
+## When to write
+
+- **`command.md`** — after each Shell tool use (Make/git/gh/docker/pytest/curl/etc.), append in the **same turn** (batch before handback only if many; prefer soon after running).
+- **`lesson_learnt.md`** — whenever something non-obvious is learned (**ongoing**), not only at handback.
+
+## Forbidden under `.agent_tasks/`
+
+Do **not** create `plan.md`, `todo.md`, `lessons.md`, `review.stamp`, or `review-feedback.md`. Plans stay in Cursor plan UI / chat. No file-based review gate.
+
+## Templates
+
+```markdown
+# Commands
+
+- `git status` — inspect working tree before branching
+- `make test-agent-stop` — verify agent-edited tests before handback
+```
+
+```markdown
+# Lessons learnt
+
+- <date or turn>: <one lesson>
+```
+
+## Depth / handback
+
+Templates and workflow wiring: `.cursor/skills/how-to-code/SKILL.md` § Task files. Handback incomplete if Shell commands ran this session and `command.md` was never updated.

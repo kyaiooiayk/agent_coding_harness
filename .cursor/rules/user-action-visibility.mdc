@@ -1,0 +1,21 @@
+---
+description: >-
+  Surface any remaining user decision, approval, credential, deploy, or manual
+  verification near the top of plan and non-plan replies — never bury it.
+alwaysApply: true
+---
+
+# User action visibility
+
+When the user must decide, approve, supply a secret, run a deploy/command, or perform a manual check:
+
+1. Put a clearly labelled **User action needed** block **near the top** of the reply (before outcome detail).
+2. Include: what is needed, the default if any, impact of each choice, and the exact reply or command.
+3. If nothing remains for the user, **do not invent** a block.
+4. **Design/safety conflicts** — when the ask conflicts with an intentional repo rail (sample JSON retention on `reset-db`, Compose-only runtime, etc.), the block must open with **Conflict:** `<want>` **vs** `<repo>` (cite path), list go-ahead options, and state that **no implementation starts until** an explicit choice is replied. Soft intent is not approval. Full gate: `.cursor/rules/clarify-before-acting.mdc` § Conflict → explicit go-ahead.
+
+**Plans:** every plan body must include `## User decisions required` after `## Requirements disposition` (and before `## Agents used` / critiques) — full front-matter order in `.cursor/rules/plan-mode.mdc`. Use **None.** when settled. Templates: `.cursor/skills/how-to-plan/SKILL.md`.
+
+**Exempt from** `tokens_economy` brevity when the block is present — visibility beats the 2–4 sentence cap for that section only.
+
+Do not duplicate this policy into `AGENTS.md` — keep a one-line router link only.

@@ -1,0 +1,18 @@
+---
+description: >-
+  When CI or pre-commit exists, keep Make checks aligned. This repo
+  currently has no GitHub Actions / pre-commit — open only if those are added.
+alwaysApply: false
+---
+
+# CI ↔ pre-commit parity
+
+This repo currently has **no** `.github/workflows/` CI job and **no**
+`.pre-commit-config.yaml`. Local quality is `make lint` / `make test` (and Cursor
+stop hooks).
+
+If you add CI or pre-commit later:
+
+1. Mirror substantive `make` checks in both places.
+2. Document new targets in `make/help.mk` (`.cursor/rules/makefile-help-sync.mdc`).
+3. Prefer the same commands locally and in CI — do not invent a second parallel list.

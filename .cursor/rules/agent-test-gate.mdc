@@ -1,0 +1,53 @@
+---
+description: >-
+  Agent test gate depth — run make test parallel=true in-chat before handback on
+  product edits. Hotline punchline: harness-hotline.mdc. Open when handing back.
+alwaysApply: false
+---
+
+# Agent test gate (in-turn verification)
+
+**Disclosure:** Tier C (on demand). Punchline always on in `.cursor/rules/harness-hotline.mdc`. Model: `docs/agent_context_disclosure.md`.
+
+The stop hook (`stop-gate-on-stop.sh`) runs **after** the agent turn ends. Chat can look finished before lint, dev-build, or tests start. **Do not hand back on faith that the hook will pass.**
+
+## Mandatory before handback (product code)
+
+After **any** product-code edit (`Write` / `StrReplace` on paths outside `.cursor/`, `docs/`, `knowledge/`, `BAU/`, `*.md`):
+
+1. **Run tests in this turn** — `make test parallel=true` (parallel backend pytest + frontend Vitest + Playwright E2E). For narrow edits, run the closest scoped test first, then the full gate before handback. Faster unit-only escape: `make test-agent-stop` when E2E is out of scope for the change — remember the stop hook still runs full E2E.
+2. **Fix failures** — if tests fail, diagnose and fix in the same turn; re-run until green. Do not hand back with "the stop hook should catch this" or "please run tests."
+3. **E2E when triggered** — `make e2e-test file=…` per `docs/testing_strategy.md` (same turn as the E2E file change). Name the command and pass/fail in handback. Plain `pytest e2e_test/` without `make e2e-test` does not count. Stack down → handback **Blocked: stack down**, not “E2E deferred”.
+4. **Report result** — handback states which test command ran and that it passed (e.g. "make test parallel=true — … passed").
+
+## Commands
+
+| When | Command |
+|---|---|
+| Default handback gate | `make test parallel=true` |
+| Faster unit-only escape | `make test-agent-stop` (backend + frontend; no E2E) |
+| One microservice touched | `make test svc=<name>` then full gate |
+| Frontend-only | `make test-frontend`; `npm run build` in `frontend/` when types/BFF changed |
+| Python coverage on touch | `make test-coverage svc=…` |
+| E2E triggers / one file | `make e2e-test file=…` |
+| Cloud / hosted UI | `make test parallel=true remote=true` |
+
+**Do not** tell the user to run `make dev-build` — the stop hook owns rebuild. **Do** run tests yourself before handback.
+
+## Stop hook relationship
+
+| Layer | Role |
+|---|---|
+| **Agent (this rule)** | Run `make test parallel=true` in the turn; fix failures before claiming done |
+| **Stop hook** | Backup: lint → dev-build → `make test parallel=true` after turn end; `followup_message` repair loop on failure |
+
+When the hook injects `Hooks blocked handback`, treat it as blocking: fix and re-run tests in a follow-up turn until green.
+
+## Reject
+
+- Handback without running tests when product code changed in this turn.
+- "Let the stop hook run tests" / "tests should pass" without a run in this turn.
+- Deferring fixable local failures to the user.
+- Skipping the gate because the diff also touches `.cursor/` or docs — product edits still require in-turn tests.
+
+Full workflow: `.cursor/skills/how-to-code/SKILL.md` step 6. Hook detail: `.cursor/hooks/README.md`.

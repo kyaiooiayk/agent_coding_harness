@@ -1,0 +1,28 @@
+---
+description: End-user how-tos live under docs/; add or update in the same PR as user-facing behaviour.
+alwaysApply: true
+---
+
+# User feature how-tos (`docs/`)
+
+Short end-user how-tos (UI flows) live under **`docs/`** as OKF `type: Guide` concepts alongside contracts and runbooks.
+
+## Invariant
+
+When a PR ships **new or changed end-user steps** for a product feature, it must include:
+
+1. **`docs/<slug>.md`** — scannable steps, quick-reference table if multiple paths, config SSOT named once; OKF frontmatter with `type: Guide`
+2. **`docs/index.md`** (+ `docs/README.md` End-user how-tos table) — index row for that how-to
+3. **Cross-link** — one line from related contract/runtime docs when they point users at the flow
+
+SOP: `.cursor/skills/how-to-user-feature-guide/SKILL.md`.
+
+## Phase 5 gate
+
+Walk with five-phase delivery Phase 5: if the task added user-visible procedures and no matching `docs/` Guide exists, **create it before handback** — not a follow-up PR.
+
+## Reject
+
+- User steps only in a plan file, ticket, or agent chat
+- Duplicating full operator setup in a Guide instead of linking [local_dev_docker.md](../../docs/local_dev_docker.md) / service READMEs
+- New user-facing UI flow with no `docs/index.md` entry

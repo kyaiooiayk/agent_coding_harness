@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "type": "command",
+        "command": ".cursor/hooks/lint-after-edit.sh",
+        "matcher": "Write|StrReplace|Edit|Delete",
+        "timeout": 120
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "command": ".cursor/hooks/stop-gate-on-stop.sh",
+        "timeout": 3600,
+        "loop_limit": 10
+      }
+    ]
+  }
+}

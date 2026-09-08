@@ -1,0 +1,38 @@
+---
+description: >-
+  Short always-on punchlines for tests and bug proof — open full rule/doc bodies
+  on demand via AGENTS.md (avoid context rot).
+alwaysApply: true
+---
+
+# Harness hotline (Tier A)
+
+Router: `AGENTS.md`. This harness has no separate agent-context-disclosure doc — keep this file short.
+
+## Tests (open depth when writing or reviewing tests)
+
+- Behaviour change / bug fix / user gap → **new or updated unit test in the same change** (failing test first). Depth: `.cursor/rules/tdd.mdc`, `docs/testing_strategy.md`.
+- Assert **outcomes** (DOM text, HTTP body, persisted store fields) — not `toHaveBeenCalledWith` / `mock.assert_called()` alone. Depth: `.cursor/rules/test-doubles.mdc`, `docs/testing_strategy.md`.
+- File-store write-path change → failing test that asserts **persisted store state** first.
+- Vitest / React: partial API stubs + RTL state. Depth: `.cursor/rules/frontend-test-mocking.mdc`.
+- Product edits → run `make test parallel=true` in this turn. Depth: `.cursor/rules/agent-test-gate.mdc`.
+- E2E: Playwright against Compose; clean up resources/files created by the test (including on failure).
+
+## Bugs
+
+- Unexpected red → **stop** unrelated work; preserve evidence; prove with a failing harness test before product edit. Depth: `.cursor/rules/fix-root-cause.mdc`.
+- No failing harness test → **do not claim root cause is proven**. Handback **Bug proof** block. Depth: `.cursor/rules/prove-bug-with-test.mdc`, `.cursor/skills/how-to-prove-a-bug/SKILL.md`.
+
+## Conflicts (design / safety)
+
+- Ask vs intentional repo rail → **loud Conflict** + **User action needed** + **stop** until explicit go-ahead. Depth: `.cursor/rules/clarify-before-acting.mdc`; `.cursor/rules/user-action-visibility.mdc`.
+
+## Session audit (every ticket)
+
+- Every session: append Shell commands to `.agent_tasks/<session-id>/command.md` and lessons to `lesson_learnt.md`. Depth: `.cursor/rules/agent-tasks-session-audit.mdc`; templates in `.cursor/skills/how-to-code/SKILL.md` § Task files.
+
+## Do not
+
+- Stuff long rule tables into always-on context — **Read** depth files when the task needs them.
+- Skip opening depth because “a test exists” — a wiring-only mock assertion is incomplete.
+- Invent product surfaces (extra services, channels, cloud deploy) that `PRODUCT.md` / `docs/` / `.cursor/rules/stack.mdc` do not describe.
